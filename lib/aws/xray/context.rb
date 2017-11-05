@@ -48,7 +48,7 @@ module Aws
         end
       end
 
-      attr_reader :name
+      attr_reader :name, :base_segment
 
       def initialize(name, trace, base_segment_id = nil)
         raise 'name is required' unless name
@@ -74,18 +74,18 @@ module Aws
       # @yield [Aws::Xray::Segment]
       # @return [Object] A value which given block returns.
       def start_segment
-        base_segment = Segment.build(@name, @trace)
-        @base_segment_id = base_segment.id
+        @base_segment = Segment.build(@name, @trace)
+        @base_segment_id = @base_segment.id
 
         begin
-          yield base_segment
+          yield @base_segment
         rescue Exception => e
-          base_segment.set_error(fault: true, e: e)
+          @base_segment.set_error(fault: true, e: e)
           record_traced! if @trace.sampled?
           raise e
         ensure
-          base_segment.finish unless base_segment.finished?
-          Client.send_segment(base_segment) if @trace.sampled?
+          @base_segment.finish unless @base_segment.finished?
+          Client.send_segment(@base_segment) if @trace.sampled?
         end
       end
       alias_method :base_trace, :start_segment
