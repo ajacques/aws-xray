@@ -5,6 +5,7 @@ module Aws
   module Xray
     class Context
       VAR_NAME = :_aws_xray_context_
+      PARENT_SEGMENT_NAME = :_aws_xray_parent_segment_
 
       class << self
         # @return [Aws::Xray::Context]
@@ -96,7 +97,10 @@ module Aws
       # @return [Object] A value which given block returns.
       def start_subsegment(remote:, name:)
         raise SegmentDidNotStartError unless @base_segment_id
-        sub = Subsegment.build(@trace, @base_segment_id, remote: remote, name: overwrite_name(name))
+        parent = Thread.current.thread_variable_get(PARENT_SEGMENT_NAME)
+        parent_id = if parent.present? then parent.id else @base_segment_id end
+        sub = Subsegment.build(@trace, parent_id, remote: remote, name: overwrite_name(name))
+        Thread.current.thread_variable_set(PARENT_SEGMENT_NAME, sub)
 
         begin
           yield sub
@@ -105,6 +109,7 @@ module Aws
           record_traced! if @trace.sampled?
           raise e
         ensure
+          Thread.current.thread_variable_set(PARENT_SEGMENT_NAME, parent)
           sub.finish unless sub.finished?
           Client.send_segment(sub) if @trace.sampled?
         end
