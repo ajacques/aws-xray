@@ -17,6 +17,7 @@ module Aws
       end
 
       attr_reader :name, :id, :trace_id, :parent_id
+      attr_accessor :user
 
       def initialize(name:, trace_id:, parent_id: nil)
         @name = name
@@ -112,6 +113,7 @@ module Aws
           annotations: @annotation,
           metadata: @metadata,
         }
+        h[:user] = @user if @user
         if @version
           h[:service] = { version: @version }
         end

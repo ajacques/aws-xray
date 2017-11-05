@@ -23,6 +23,12 @@ RSpec.describe Aws::Xray::Segment do
 
       SegmentValidator.call(segment.to_json)
     end
+
+    it 'supports user field' do
+      segment = described_class.build('test-app', trace)
+      segment.user = 'example'
+      expect(segment.to_h).to include(user: 'example')
+    end
   end
 
   describe '#add_annotation' do
